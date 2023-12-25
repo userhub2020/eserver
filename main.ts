@@ -76,7 +76,3 @@ basic.forever(() => {
     }
     basic.pause(500)
 })
-
-// setup the radio and start!
-radio.setGroup(4)
-game.addScore(1)
