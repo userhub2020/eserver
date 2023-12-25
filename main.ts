@@ -1,66 +1,59 @@
-/**
- * Radio monitoring dashboard
- * 
- * Each radio client is represented by a dot on the screen.
- * Once a client is registered, it will stay at the same pixel location
- * forever.
- * 
- * Radio clients can simply send a number (between 0..255) on group 4.
- * They must transmit the serial number using ``radio.setTransmitSerialNumber(true)``
- * 
- * The received number is used to set the LED brightness for that client.
- * 
- * If the radio packet is not received for 10sec, the LED starts blinking.
- */
 const deadPing = 20000;
 const lostPing = 10000;
 
+// Record für Client
 interface Client {
-    // client serial id
     id: number;
-    // sprite on screen
     sprite: game.LedSprite;
-    // last ping received
     ping: number;
 }
 
+// Array der Clients
 const clients: Client[] = [];
 
-/* lazy allocate sprite */
+
 function getClient(id: number): Client {
-    // needs an id to track radio client's identity
+
     if (!id)
         return undefined;
-
-    // look for cached clients
+    // client in array suchen
     for (const client of clients)
         if (client.id == id)
             return client;
+
+    // max 24 Clients möglich
     const n = clients.length;
-    if (n == 24) // out of pixels
+    if (n == 24)
         return undefined;
+
+    // neuen Client zusammensetzen
     const client: Client = {
         id: id,
+        // pixel x und y in der 5x5 Matrix
         sprite: game.createSprite(n % 5, n / 5),
         ping: input.runningTime()
     }
-    clients.push(client);
+
+    // neuen Client hinten anfügen und zurückgeben
+    clients.push(client); 
     return client;
 }
 
-// store data received by clients
-radio.onReceivedNumber(function (receivedNumber) {
-    const serialNumber = radio.receivedPacket(RadioPacketProperty.SerialNumber)
-    const client = getClient(serialNumber);
-    if (!client)
-        return;
 
-    client.ping = input.runningTime()
-    client.sprite.setBrightness(Math.max(1, receivedNumber & 0xff));
-})
+radio.onReceivedNumber(
+    function (receivedNumber) {
+        const serialNumber = radio.receivedPacket(RadioPacketProperty.SerialNumber)
+        const client = getClient(serialNumber);
+        if (!client)
+            return;
 
-// monitor the sprites and start blinking when no packet is received
+        client.ping = input.runningTime()
+        client.sprite.setBrightness(Math.max(1, receivedNumber & 0xff));
+    }
+)
+
 basic.forever(() => {
+    music.tonePlayable(Note.F, music.beat(BeatFraction.Quarter));
     const now = input.runningTime()
     for (const client of clients) {
         // lost signal starts blinking
@@ -78,5 +71,7 @@ basic.forever(() => {
 })
 
 // setup the radio and start!
+music.tonePlayable(Note.A, music.beat(BeatFraction.Quarter));
+
 radio.setGroup(4)
 game.addScore(1)
